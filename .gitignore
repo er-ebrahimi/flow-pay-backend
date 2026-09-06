@@ -3,6 +3,7 @@
 /node_modules
 /build
 /tmp
+*.tsbuildinfo
 
 # Logs
 logs
@@ -15,10 +16,21 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.local
 .env.development
 .env.test
 .env.production
+.env.*.local
+prisma/.env
 
 # temp directory
 .temp
 .tmp
+
+# test coverage
+/coverage
+
+# misc
+.DS_Store
+.idea
+.vscode
