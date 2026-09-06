@@ -1,21 +1,109 @@
 // use prisma-next
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum TransactionType {
+  EXCHANGE
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id Uuid @id @default(uuid())
+  email        String             @unique
+  passwordHash String
+  wallets      Wallet[]
+  quotes       ExchangeQuote[]
+  transactions Transaction[]
+  createdAt    TimestamptzString  @default(now())
+}
+
+model Currency {
+  code          String          @id
+  name          String
+  decimalPlaces Int
+  wallets       Wallet[]
+  ratesAsBase   ExchangeRate[]  @relation("ExchangeRateBase")
+  ratesAsQuote  ExchangeRate[]  @relation("ExchangeRateQuote")
+  quotesFrom    ExchangeQuote[] @relation("QuoteFrom")
+  quotesTo      ExchangeQuote[] @relation("QuoteTo")
+  txFrom        Transaction[]   @relation("TxFrom")
+  txTo          Transaction[]   @relation("TxTo")
+}
+
+model Wallet {
+  id Uuid @id @default(uuid())
+  userId       Uuid
+  user         User     @relation(fields: [userId], references: [id])
+  currencyCode String
+  currency     Currency @relation(fields: [currencyCode], references: [code])
+  balance      Numeric(18, 6)
+  version      Int      @default(0)
+  createdAt    TimestamptzString @default(now())
+
+  @@unique([userId, currencyCode])
+  @@index([userId])
+  @@index([currencyCode])
+}
+
+model ExchangeRate {
+  id Uuid @id @default(uuid())
+  baseCurrency  String
+  base          Currency @relation("ExchangeRateBase", fields: [baseCurrency], references: [code])
+  quoteCurrency String
+  quote         Currency @relation("ExchangeRateQuote", fields: [quoteCurrency], references: [code])
+  rate          Numeric(18, 10)
+  validFrom     TimestamptzString
+  validTo       TimestamptzString
+
+  @@index([baseCurrency, quoteCurrency])
+  @@index([quoteCurrency])
+}
+
+model ExchangeQuote {
+  id Uuid @id @default(uuid())
+  userId       Uuid
+  user         User      @relation(fields: [userId], references: [id])
+  fromCurrency String
+  from         Currency  @relation("QuoteFrom", fields: [fromCurrency], references: [code])
+  toCurrency   String
+  to           Currency  @relation("QuoteTo", fields: [toCurrency], references: [code])
+  amount       Numeric(18, 6)
+  fee          Numeric(18, 6)
+  lockedRate   Numeric(18, 10)
+  expiresAt    TimestamptzString
+  consumedAt   TimestamptzString?
+  transaction  Transaction?
+
+  @@index([userId])
+  @@index([fromCurrency])
+  @@index([toCurrency])
+}
+
+model Transaction {
+  id Uuid @id @default(uuid())
+  userId            Uuid
+  user              User              @relation(fields: [userId], references: [id])
+  quoteId           Uuid?             @unique
+  quote             ExchangeQuote?    @relation(fields: [quoteId], references: [id])
+  type              TransactionType
+  fromCurrency      String
+  from              Currency          @relation("TxFrom", fields: [fromCurrency], references: [code])
+  toCurrency        String
+  to                Currency          @relation("TxTo", fields: [toCurrency], references: [code])
+  sourceAmount      Numeric(18, 6)
+  fee               Numeric(18, 6)
+  exchangeRate      Numeric(18, 10)
+  destinationAmount Numeric(18, 6)
+  status            TransactionStatus
+  idempotencyKey    String            @unique
+  createdAt         TimestamptzString @default(now())
+
+  @@index([userId, type])
+  @@index([userId])
+  @@index([quoteId])
+  @@index([fromCurrency])
+  @@index([toCurrency])
 }
