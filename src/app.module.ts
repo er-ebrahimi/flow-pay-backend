@@ -3,9 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { ErrorHandlingModule } from './error-handling/error-handling.module.js';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    ErrorHandlingModule.forRoot(),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

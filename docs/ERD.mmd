@@ -1,0 +1,66 @@
+erDiagram
+    USERS ||--o{ WALLETS : owns
+    USERS ||--o{ TRANSACTIONS : makes
+    USERS ||--o{ EXCHANGE_QUOTES : requests
+    CURRENCIES ||--o{ WALLETS : denominates
+    CURRENCIES ||--o{ EXCHANGE_RATES : "base/quote"
+    EXCHANGE_QUOTES ||--o| TRANSACTIONS : locks_in
+
+    USERS {
+        uuid id PK
+        string email UK
+        string password_hash
+        timestamp created_at
+    }
+
+    CURRENCIES {
+        string code PK
+        string name
+        int decimal_places
+    }
+
+    WALLETS {
+        uuid id PK
+        uuid user_id FK
+        string currency_code FK
+        numeric balance
+        int version
+        timestamp created_at
+    }
+
+    EXCHANGE_RATES {
+        uuid id PK
+        string base_currency FK
+        string quote_currency FK
+        numeric rate
+        timestamp valid_from
+        timestamp valid_to
+    }
+
+    EXCHANGE_QUOTES {
+        uuid id PK
+        uuid user_id FK
+        string from_currency FK
+        string to_currency FK
+        numeric amount
+        numeric fee
+        numeric locked_rate
+        timestamp expires_at
+        timestamp consumed_at
+    }
+
+    TRANSACTIONS {
+        uuid id PK
+        uuid user_id FK
+        uuid quote_id FK
+        string type
+        string from_currency FK
+        string to_currency FK
+        numeric source_amount
+        numeric fee
+        numeric exchange_rate
+        numeric destination_amount
+        string status
+        string idempotency_key UK
+        timestamp created_at
+    }

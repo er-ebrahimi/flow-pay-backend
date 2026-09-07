@@ -1,0 +1,42 @@
+
+flowchart TD
+    A[User opens app] --> B{Logged in?}
+    B -- No --> C[Register or Login]
+    C --> D[Dashboard: total balance + wallets + recent transactions]
+    B -- Yes --> D
+
+    D --> E[Click a currency wallet, e.g. USD]
+    E --> F["Currency page: GET /wallets/USD + GET /transactions?currency=USD"]
+    F -.->|no transactions| F1[Empty state: No transactions yet]
+    F --> G[Click Exchange button]
+
+    G --> H["Show exchangeable currencies: GET /currencies, excluding USD"]
+    H --> I[Select target currency, e.g. EUR]
+    I --> J[Enter amount]
+    J --> K[GET /exchange-rates: live indicative rate]
+    K --> L[POST /exchange-quotes]
+
+    L --> M{Valid?}
+    M -- SAME_CURRENCY / INVALID_AMOUNT --> J
+    M -- INSUFFICIENT_BALANCE --> N[Show: Insufficient USD balance]
+    N --> J
+    M -- OK --> O[Review screen: locked rate, fee, amount received, 60s TTL]
+
+    O --> P{User confirms within TTL?}
+    P -- Expires --> Q[QUOTE_EXPIRED - request new quote]
+    Q --> L
+    P -- Cancels --> I
+    P -- Confirms --> R[POST /exchanges with Idempotency-Key]
+
+    R --> S{Idempotency-Key seen before?}
+    S -- Yes --> T[200: return original result, no re-execution]
+    S -- No --> U[DB transaction: lock wallets, re-check balance, debit source, credit destination]
+
+    U --> V{Re-check passes?}
+    V -- INSUFFICIENT_BALANCE --> N
+    V -- QUOTE_ALREADY_CONSUMED --> W[Show: quote already used]
+    V -- OK --> X[Insert Transaction, status COMPLETED]
+
+    X --> Y[201: success + updated balances]
+    T --> Y
+    Y --> Z[Back to currency page - both wallets and histories refreshed]

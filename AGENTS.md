@@ -2,6 +2,18 @@
 
 Backend: NestJS 12 (strict TypeScript 6, ESM) + Prisma Next (v8 RC) with PostgreSQL >= 15. README is a stub — this file is the real ramp-up.
 
+## NestJS skill
+
+Use the `nestjs-best-practices` skill (`.agents/skills/nestjs-best-practices/SKILL.md`) when writing, reviewing, or refactoring NestJS code — it covers module/DI patterns, security, and performance rules. Load it before implementing features.
+
+## Commenting standard — MANDATORY
+
+Follow `docs/COMMENTING_STANDARD.md` for every comment, JSDoc block, and TODO: comments explain **why** (intent, constraints, assumptions, workarounds, public API behavior), never restate **what** the code already says. Every TODO must follow `// TODO: <issue-or-doc-reference> - <specific action>`. When reviewing code, apply the standard's Section 6 checklist and flag comments that repeat code, are stale, or record change history.
+
+## Error handling — MANDATORY
+
+**Always use the centralized error-handling system in `src/error-handling/`.** Never throw bare `Error`, never register ad-hoc `@Catch()` filters, and never build error responses manually in controllers or services. Raise domain exceptions extending `AppException` (see `docs/ERROR_HANDLING.md` for the class table and full rules). New cases = new exception + mapper registered via `ErrorHandlingModule.forRoot({ mappers: [...] })`; the global filter itself is closed for modification. `GlobalExceptionFilter` is already registered globally in `AppModule`.
+
 ## Commands
 
 ```bash
@@ -32,6 +44,10 @@ npm run contract:emit # regenerate Prisma contract after editing the schema
 - Copy `.env.example` → `.env` (gitignored). Requires `DATABASE_URL` pointing at PostgreSQL **>= 15** and optionally `PORT`.
 - `src/prisma/db.ts` and `prisma.config.ts` each call `dotenv` themselves; `ConfigModule` is global (`app.module.ts`).
 - `.env` and any `prisma/.env` are gitignored — never commit them.
+
+## Code review
+
+When asked to review code (PRs, commits, diffs, or the whole app), first read `docs/CODE_REVIEW.md` and follow it — it defines the review checklist, criteria, and report format.
 
 ## Tests
 
