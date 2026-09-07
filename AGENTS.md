@@ -49,6 +49,8 @@ npm run contract:emit # regenerate Prisma contract after editing the schema
 
 When asked to review code (PRs, commits, diffs, or the whole app), first read `docs/CODE_REVIEW.md` and follow it — it defines the review checklist, criteria, and report format.
 
-## Tests
+## Tests — MANDATORY
+
+**Always follow `docs/TEST.md` when writing, reviewing, or refactoring any test** — it defines the test pyramid ratios, file/naming conventions, unit/integration/E2E rules, mocking discipline, and coverage targets. Non-negotiable points: unit tests live next to the code as `*.spec.ts`, e2e in `test/*.e2e-spec.ts`, AAA structure, no real DB in unit/integration tests, `await app.close()` in `afterAll()`, and no skipped/`.only()` tests allowed to merge.
 
 Vitest with `globals: true` — `describe`/`it`/`expect` work without imports (`types: ["vitest/globals"]` in tsconfig). Unit tests live anywhere as `*.spec.ts`; e2e in `test/*.e2e-spec.ts`. Path aliases resolve via `vite-tsconfig-paths`. E2E bootstraps the Nest app, so a reachable database is required.
