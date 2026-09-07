@@ -22,6 +22,10 @@ describe('Swagger (e2e)', () => {
     expect(body.components?.securitySchemes).toMatchObject({
       jwt: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
     });
+    // The requirement must reference the scheme at the document level:
+    // a defined scheme alone is inert and Swagger UI would authorize a token
+    // that never reaches the actual requests.
+    expect(body.security).toEqual([{ jwt: [] }]);
     // Paths include a leading /x because Express mounts from / with no global
     // prefix; the account shapes carry the validation constraints.
     expect(body.paths['/auth/register']).toBeTruthy();

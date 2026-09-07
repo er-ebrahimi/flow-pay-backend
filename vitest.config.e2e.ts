@@ -23,5 +23,11 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
+    // Every spec shares the flowpay_test database; parallel workers would let
+    // one file's resetDatabase() pull the rug out from under another's assertions.
+    // Growth path if serial runtime ever hurts CI: per-worker database via
+    // testcontainers/prisma db update instead of serialization.
+    fileParallelism: false,
+    testTimeout: 30_000,
   },
 });

@@ -46,11 +46,25 @@ Error shape (always — from `GlobalExceptionFilter`):
 ## Currencies
 
 ### GET /currencies
+Optional query: `?exclude=<CODE>` — drops that currency from the response
+(backend-side filtering for the exchange dialog). A well-formed but unknown
+code silently filters nothing.
+
 ```json
 // 200
-[ { "code": "USD", "name": "US Dollar", "decimalPlaces": 2 } ]
+[
+  {
+    "code": "USD", "name": "US Dollar", "decimalPlaces": 2, "walletCount": 4
+  }
+]
 ```
-No error cases — always 200, empty array at worst.
+`walletCount` is a global statistic (number of wallets holding the currency, across all
+users) — not user-scoped, no PII. Rows are sorted by `code` ascending.
+
+| Case | Class | code | HTTP |
+|---|---|---|---|
+| `exclude` present but not 3 uppercase letters | `ValidationPipeMapper` (auto) | `VALIDATION_FAILED` | 400 |
+| Missing auth token | `JwtAuthGuard` (auto) | `UNAUTHORIZED` | 401 |
 
 ---
 
@@ -192,3 +206,15 @@ Query: `page`, `limit` (default 20), `type`, `status`, `currency`, `dateFrom`, `
 | `QUOTE_EXPIRED` | 410 | New — `QuoteExpiredException` |
 | `QUOTE_ALREADY_CONSUMED` | 409 | New — `QuoteAlreadyConsumedException` |
 | `INTERNAL_ERROR` | 500 | Base table — `DefaultMapper` catch-all |
+
+
+## Edge cases that actually bite
+1. **Double-submit / network retry** → idempotency key required
+2. **Concurrent exchanges draining same wallet** → row-level locking or optimistic concurrency
+3. **Rate expires between quote and confirm** → need a "quote" entity with TTL, not live rate lookup at confirm time
+4. **Same-currency exchange** → reject at validation, not DB constraint
+5. **Partial failure mid-exchange** (debit succeeds, credit fails) → must be one DB transaction
+6. **Currency-specific decimal places** (JPY has 0 decimals, most have 2) → can't hardcode 2
+7. **Negative/zero/garbage amount input**
+8. **Wallet doesn't exist yet for a currency** → auto-create on first use, or pre-provision on registration?
+9. **Rounding on fee + conversion** → define rounding order explicitly (fee first, then convert — the doc confirms this order, good)

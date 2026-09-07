@@ -17,7 +17,11 @@ export function configureSwagger(app: INestApplication): void {
       ].join('\n'),
     )
     .setVersion('1.0')
+    // addBearerAuth defines the scheme in components.securitySchemes; without
+    // an explicit security requirement it is inert and Swagger UI would authorize
+    // a token that never reaches the requests (curl shows no header).
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'jwt')
+    .addSecurityRequirements('jwt')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
