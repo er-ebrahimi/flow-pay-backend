@@ -34,3 +34,5 @@ prisma/.env
 .DS_Store
 .idea
 .vscode
+
+.env.test
