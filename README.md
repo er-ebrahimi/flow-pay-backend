@@ -55,6 +55,42 @@ Key acceptance rules:
 
 - Node.js >= 20
 - PostgreSQL >= 15 with a reachable database
+- (Optional) Docker + Docker Compose for containerized runs
+
+## Run with Docker
+
+```bash
+docker compose up -d
+```
+
+Builds the API image and starts both services:
+
+| Service | Image | Host port |
+|---|---|---|
+| `db` | postgres:16-alpine | `5434` |
+| `api` | built from Dockerfile | `3000` |
+
+Then initialize the schema:
+
+```bash
+DATABASE_URL="postgresql://flowpay:flowpay_dev_pass@localhost:5434/flowpay?schema=public" npx prisma db update
+```
+
+The API is now at `http://localhost:3000` and Swagger UI at `http://localhost:3000/docs`. Override ports with `DB_PORT` / `API_PORT`. Full guide: [`docs/DOCKER.md`](docs/DOCKER.md).
+
+## Run tests
+
+```bash
+npm test          # unit tests (no database needed)
+npm run test:e2e  # e2E tests (needs a running PostgreSQL)
+```
+
+E2E tests read their connection from `.env.test` (copy `.env.test.example` → `.env.test`). Keep this database separate from dev/prod — `afterEach` truncates data between specs. Start a PostgreSQL instance (any port — just point `DATABASE_URL` at it), then:
+
+```bash
+cp .env.test.example .env.test
+npm run test:e2e
+```
 
 ## Getting started
 

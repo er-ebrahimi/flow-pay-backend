@@ -48,6 +48,17 @@ export class RatesService {
    * the live rate without touching older rows (full audit trail is kept).
    */
   async setRate(dto: SetExchangeRateDto): Promise<CreatedRate> {
+    // Validate currencies up front so a bad code returns a clean 404 instead
+    // of a raw foreign-key violation from the database.
+    const currencies = (await this.prisma.db.orm.public.Currency.all()) as Array<{ code: string }>;
+    const base = currencies.find((row) => row.code === dto.base);
+    const quote = currencies.find((row) => row.code === dto.quote);
+    if (base === undefined || quote === undefined) {
+      throw new NotFoundException('currency not found', {
+        currencyCode: base === undefined ? dto.base : dto.quote,
+      });
+    }
+
     const inserted = (await this.prisma.db.orm.public.ExchangeRate.create({
       baseCurrency: dto.base,
       quoteCurrency: dto.quote,

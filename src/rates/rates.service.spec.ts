@@ -10,6 +10,15 @@ function dbForStored(rows: Array<{ rate: string; validFrom: string; validTo: str
   return {
     orm: {
       public: {
+        Currency: {
+          all: () =>
+            Promise.resolve([
+              { code: 'USD', name: 'US Dollar', decimalPlaces: 2 },
+              { code: 'EUR', name: 'Euro', decimalPlaces: 2 },
+              { code: 'GBP', name: 'British Pound', decimalPlaces: 2 },
+              { code: 'AED', name: 'UAE Dirham', decimalPlaces: 2 },
+            ]),
+        },
         ExchangeRate: {
           where: () => ({ all: () => Promise.resolve(rows) }),
           create: (data: { rate: { toString: () => string } }) =>
