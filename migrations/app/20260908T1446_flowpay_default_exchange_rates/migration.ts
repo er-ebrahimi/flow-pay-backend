@@ -10,6 +10,7 @@ import type {
 import endContract from '../../snapshots/957e80e05e70d3ebd716d63b832d9fa6fb065765a6daee599f0abe2049e9361f/contract.json' with { type: 'json' };
 import startContract from '../../snapshots/957e80e05e70d3ebd716d63b832d9fa6fb065765a6daee599f0abe2049e9361f/contract.json' with { type: 'json' };
 import { Migration, MigrationCLI, rawSql } from '@prisma/orm-postgres/migration';
+import { MigrationPlanOperation } from '@prisma/orm-postgres/components';
 
 // The rate is read when this file self-emits ops.json and is then baked into
 // the committed package — editing .env afterwards does not touch rows that
@@ -41,7 +42,7 @@ export default class M extends Migration<Start, End> {
   override readonly startContractJson = startContract;
   override readonly endContractJson = endContract;
 
-  override get operations() {
+  override get operations():readonly (MigrationPlanOperation | Promise<MigrationPlanOperation>)[] {
     const rate = defaultRate();
     const pairs = SEED_CURRENCIES.flatMap((base) =>
       SEED_CURRENCIES.filter((quote) => quote !== base).map(

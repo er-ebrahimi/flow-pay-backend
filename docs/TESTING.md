@@ -24,12 +24,13 @@ CI invariants: no `.skip()`, no `.only()`.
 
 ## 2. Current suite inventory
 
-### Unit — `npm test` (12 files, 85 tests)
+### Unit — `npm test` (13 files, 91 tests)
 
 | File | Covers | Notes |
 |---|---|---|
 | `src/shared/money/money.spec.ts` (7) | `Money` value object | parse/render at fixed scale, BigInt addition/subtraction, rate multiplication carrying scale, half-up `roundTo`, comparisons, negative/zero flags |
 | `src/rates/rate-string.mapper.spec.ts` (5 via `each`) | `renderRate` | DB numeric(18,10) rate strings trimmed to stored precision |
+| `src/rates/rates.service.spec.ts` (8) | `RatesService` | active-rate resolution (newest active `validFrom`, expired rows ignored, empty → 404), `setRate` insert + render |
 | `src/exchange/quotes.service.spec.ts` (4) | `QuotesService.createQuote` | fee/destination math (half-up), `SAME_CURRENCY`, `INVALID_AMOUNT` scale check, `INSUFFICIENT_BALANCE` |
 
 | File | Covers | Notes |
@@ -48,14 +49,14 @@ CI invariants: no `.skip()`, no `.only()`.
 
 | `src/transactions/transactions.service.spec.ts` (6) | `TransactionsService` | newest-first paging, silent `limit` cap at 100, both-side currency filter, id-prefix search, detail fee/rate/`quoteId` rendering, identical `NOT_FOUND` for unknown/foreign ids |
 
-### E2E — `npm run test:e2e` (8 files, 45 tests, real HTTP via Supertest)
+### E2E — `npm run test:e2e` (9 files, 48 tests, real HTTP via Supertest)
 
 | File | Covers |
 |---|---|
 | `test/auth.e2e-spec.ts` (6) | register 201 shape, duplicate 409 `CONFLICT`, invalid credentials 401 `UNAUTHORIZED` (both branches byte-identical), unauthenticated 401 on `POST /auth/logout` (the protected guard probe until wallet/dashboard endpoints exist), malformed payload 400 `VALIDATION_FAILED`, full journey (register → login → authorized `POST /auth/logout` → USD wallet balance `100.000000` asserted in DB) |
 | `test/currencies.e2e-spec.ts` (5) | unauthenticated 401, seeded list sorted by code with camelCase rows, `?exclude=USD` filter, malformed `?exclude` → `VALIDATION_FAILED`, `walletCount` reflects the USD starter wallet created by registration |
 | `test/wallets.e2e-spec.ts` (6) | unauthenticated 401, starter-wallet list with formatted balance, detail route with `createdAt`, identical 404 bodies for unknown vs unused currency, user-scoping of wallet reads, malformed route code → `VALIDATION_FAILED` |
-| `test/rates.e2e-spec.ts` (5) | unauthenticated 401, active-rate round-trip (`asOf`, trimmed rate), 404 with base/quote context for missing pair, `base==quote` 400, malformed params 400 |
+| `test/rates.e2e-spec.ts` (8) | unauthenticated 401, active-rate round-trip (`asOf`, trimmed rate), 404 with base/quote context for missing pair, `base==quote` 400, malformed params 400, `POST /exchange-rates` create + supersede + validation errors |
 | `test/exchange-quotes.e2e-spec.ts` (4) | quote creation body with TTL window, same-currency + unknown-currency errors, 422 `INSUFFICIENT_BALANCE`, precision error (`INVALID_AMOUNT`) |
 | `test/exchange-transaction.e2e-spec.ts` (7) | full confirm journey with both wallet mutations asserted, same-key replay 200 with no second tx row, consumed quote 409, TTL expiry 410, in-tx insufficient funds 422, missing `Idempotency-Key` 400, foreign quote 404 |
 | `test/transactions.e2e-spec.ts` (6) | empty page as 200, exchange listed with rendered amounts, currency filter + user-scoping + malformed query, detail fee/rate rendering, identical 404 for unknown/foreign ids |

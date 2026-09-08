@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: flowpay
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-flowpay_dev_pass}
+      POSTGRES_DB: flowpay
+
+    ports:
+      - "${DB_PORT:-5434}:5432"
+
+    networks:
+      - flow-pay-network
+
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowpay -d flowpay"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://flowpay:${DB_PASSWORD:-flowpay_dev_pass}@db:5432/flowpay?schema=public
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      EXCHANGE_RATE_DEFAULT: ${EXCHANGE_RATE_DEFAULT:-1}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+
+    ports:
+      - "${API_PORT:-3000}:3000"
+
+    networks:
+      - flow-pay-network
+
+volumes:
+  db_data:
+
+networks:
+  flow-pay-network:
+    external: true

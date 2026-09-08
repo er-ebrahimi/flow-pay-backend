@@ -150,7 +150,23 @@ Rows are sorted by `currencyCode` ascending.
 | Missing/invalid query params, or `base` == `quote` | `ValidationPipeMapper` / `ValidationException` (`context.reason = 'SAME_CURRENCY'`) | `VALIDATION_FAILED` | 400 |
 | No active rate for the pair (non-seeded currencies) | `NotFoundException` (`context: { base, quote }`) | `NOT_FOUND` | 404 |
 
-Read-only — powers the live rate display while typing. Locks nothing.
+### POST /exchange-rates
+Inserts a new rate row for the pair. Active-rate resolution picks the newest
+`validFrom`, so a row with a recent validFrom immediately becomes the live rate
+without touching older rows (the full history is preserved for audit).
+
+```json
+// Request
+{ "base": "USD", "quote": "EUR", "rate": "0.8612", "validFrom": "2026-09-08T00:00:00Z", "validTo": "9999-12-31T23:59:59Z" }
+
+// 201
+{ "base": "USD", "quote": "EUR", "rate": "0.8612", "asOf": "2026-09-08T00:00:00.000Z" }
+```
+| Case | Class | code | HTTP |
+|---|---|---|---|
+| Missing/invalid body fields (malformed codes, bad rate, bad dates) | `ValidationPipeMapper` (auto) | `VALIDATION_FAILED` | 400 |
+| `base == quote` | `ValidationException` (`context.reason = 'SAME_CURRENCY'`) | `VALIDATION_FAILED` | 400 |
+| Missing auth token | `JwtAuthGuard` (auto) | `UNAUTHORIZED` | 401 |
 
 ---
 
