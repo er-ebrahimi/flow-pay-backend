@@ -101,21 +101,60 @@ Key acceptance rules:
 | `npm run lint` | Lint with oxlint (`oxlint src/ test/`) |
 | `npm run format` | Format with Prettier |
 | `npm run contract:emit` | Regenerate the Prisma contract after editing `prisma/schema.prisma` |
+| `docker compose up -d` | Start the API + PostgreSQL (`docker-compose.yml`) — builds the image if needed |
+| `docker compose down` | Stop and remove containers (keeps the `db_data` volume) |
+
+## Docker
+
+A multi-stage `Dockerfile` and `docker-compose.yml` are included for containerized runs. The image builds the NestJS app and the Prisma contract in a build stage, then copies only production artifacts into a slim runtime stage (~90MB).
+
+**Start the stack:**
+
+```bash
+docker compose up -d
+```
+
+This spins up two services:
+
+| Service | Image | Default host port |
+|---|---|---|
+| `db` | `postgres:16-alpine` | `5434` (PostgreSQL) |
+| `api` | built from `Dockerfile` | `3002` (HTTP) |
+
+Override ports with the `DB_PORT` / `API_PORT` env vars (defaults avoid clashes with a local Postgres on 5433 and a local dev server on 3000).
+
+**Initialize the database schema** (first run, or after a contract change):
+
+```bash
+# from the project root — reuses the host's DATABASE_URL against the Docker DB
+DATABASE_URL="postgresql://flowpay:flowpay_dev_pass@localhost:5434/flowpay?schema=public" npx prisma db update
+```
+
+`prisma db update` applies contract operations only (tables, indexes, foreign keys). It does **not** replay the raw-SQL data migrations — for those (currency seed, guardrail constraints, default exchange rates) and for the full Docker workflow, see [`docs/DOCKER.md`](docs/DOCKER.md).
 
 ## Project structure
 
 ```
-prisma/schema.prisma        Data contract (single source of truth)
-migrations/                 Snapshot-style migrations (app/refs/db.json + snapshots)
+Dockerfile                      Multi-stage build (build + runtime)
+docker-compose.yml              API + PostgreSQL services
+.dockerignore                   Excluded from the build context
+prisma/schema.prisma            Data contract (single source of truth)
+migrations/                     Snapshot-style migrations (app/refs/db.json + snapshots)
 src/
-  main.ts                   Bootstrap: global ValidationPipe + Swagger + listen
-  app.module.ts             Root module
-  auth/                     Register/login/logout, JWT strategy, global guard, password hasher
-  prisma/                   Contract-based client singleton + PrismaService
-  error-handling/           GlobalExceptionFilter, AppException, error mappers, logger
-  swagger/                  OpenAPI configuration (served at /docs)
-test/                       E2E tests (*.e2e-spec.ts)
-docs/                       API contract, error handling, testing, review standards
+  main.ts                       Bootstrap: global ValidationPipe + Swagger + listen
+  app.module.ts                 Root module
+  auth/                         Register/login/logout, JWT strategy, global guard, password hasher
+  prisma/                       Contract-based client singleton + PrismaService
+  error-handling/               GlobalExceptionFilter, AppException, error mappers, logger
+  currencies/                   Currencies endpoint with wallet counts
+  wallets/                      Wallet list/detail with per-currency balance formatting
+  rates/                        Active exchange-rate resolution
+  exchange/                     Quotes + confirm (idempotent), exchange exceptions
+  transactions/                 List/detail with filters and pagination
+  dashboard/                    Aggregated balances (USD) + recent activity
+  shared/money/                 Decimal Money value object (BigInt, half-up rounding)
+test/                           E2E tests (*.e2e-spec.ts)
+docs/                           API contract, Docker, error handling, testing, review standards
 ```
 
 ## Architecture
@@ -319,6 +358,9 @@ Base operations (full details in [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md))
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` | register/login public |
 | Currencies | `GET /currencies` | JWT |
 | Wallets | `GET /wallets`, `GET /wallets/:currencyCode` | JWT |
+| Rates | `GET /exchange-rates?base&quote`, `POST /exchange-rates` | JWT |
+| Exchange | `POST /exchange-quotes`, `POST /exchanges` | JWT |
+| Transactions | `GET /transactions`, `GET /transactions/:id` | JWT |
 | Dashboard | `GET /dashboard` | JWT |
 
 Every error response uses the same shape:
@@ -336,6 +378,7 @@ Every error response uses the same shape:
 ## Documentation
 
 - [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — endpoints, request/response shapes, error codes
+- [`docs/DOCKER.md`](docs/DOCKER.md) — containerized setup, build, and deployment
 - [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — error-handling system and exception class table
 - [`docs/TEST.md`](docs/TEST.md) — testing conventions and coverage targets
 - [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md) — review checklist

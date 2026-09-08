@@ -24,7 +24,19 @@ npm run format        # prettier --write (singleQuote, trailingComma: all)
 npm test              # vitest run — unit tests matching *.spec.ts
 npm run test:e2e      # separate config: vitest.config.e2e.ts, matches *.e2e-spec.ts
 npm run contract:emit # regenerate Prisma contract after editing the schema
+docker compose up -d    # start API + PostgreSQL containers (builds the image if needed)
+docker compose down     # stop containers (keeps the db_data volume)
+docker compose down -v  # stop and delete the database volume
 ```
+
+## Docker
+
+Containerized runs use a multi-stage `Dockerfile` and `docker-compose.yml` (see `docs/DOCKER.md` for the full guide).
+
+- `docker compose up -d` starts `db` (Postgres 16, host port `5434`) and `api` (built image, host port `3002`). Override ports with `DB_PORT` / `API_PORT`.
+- After containers are up, apply the schema from the host: `DATABASE_URL="postgresql://flowpay:flowpay_dev_pass@localhost:5434/flowpay?schema=public" npx prisma db update`. This applies contract operations only — raw-SQL data migrations (currency seed, guardrails, default rates) must be applied separately.
+- Runtime image is ~90MB, runs as non-root (`appuser`), exposes port 3000.
+- Production: set a strong `JWT_SECRET`; the default is not safe. Run `prisma db update` from the host or CI, not from inside the container.
 
 ## Prisma Next (not classic Prisma — do not use the classic playbook)
 

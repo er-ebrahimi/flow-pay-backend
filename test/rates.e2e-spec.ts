@@ -90,6 +90,59 @@ describe('Exchange rates (e2e)', () => {
 
     expect(response.body.error).toMatchObject({ code: 'VALIDATION_FAILED' });
   });
+
+  it('rejects a malformed rate body with the validation envelope', async () => {
+    const token = await registerAndLogin(app);
+
+    const response = await request(app.getHttpServer())
+      .post('/exchange-rates')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ base: 'usd', quote: 'EUR', rate: '0.86', validFrom: 'not-a-date', validTo: '9999-12-31T00:00:00Z' })
+      .expect(400);
+
+    expect(response.body.error).toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('rejects same-currency rate creation', async () => {
+    const token = await registerAndLogin(app);
+
+    const response = await request(app.getHttpServer())
+      .post('/exchange-rates')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ base: 'USD', quote: 'USD', rate: '1', validFrom: '2026-09-08T00:00:00Z', validTo: '9999-12-31T00:00:00Z' })
+      .expect(400);
+
+    expect(response.body.error).toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('creates a rate row that becomes the active rate', async () => {
+    const token = await registerAndLogin(app);
+    // validFrom = now is newer than the seeded defaults (now() - 1 hour), so
+    // the new row wins under newest-validFrom-wins resolution.
+    const validFrom = new Date().toISOString();
+
+    const setResponse = await request(app.getHttpServer())
+      .post('/exchange-rates')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ base: 'USD', quote: 'EUR', rate: '0.8612', validFrom, validTo: '9999-12-31T00:00:00Z' })
+      .expect(201);
+
+    expect(setResponse.body).toMatchObject({
+      base: 'USD',
+      quote: 'EUR',
+      rate: '0.8612',
+    });
+
+    // The new row supersedes the older seeded rate because its validFrom is newer.
+    const getResponse = await request(app.getHttpServer())
+      .get('/exchange-rates')
+      .set('Authorization', `Bearer ${token}`)
+      .query('base=USD')
+      .query('quote=EUR')
+      .expect(200);
+
+    expect(getResponse.body).toMatchObject({ base: 'USD', quote: 'EUR', rate: '0.8612' });
+  });
 });
 
 async function seedRates(client: pg.Client): Promise<void> {

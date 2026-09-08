@@ -45,7 +45,7 @@ export class AuthService {
           balance: this.initialWalletBalanceUsd,
           version: 0,
         });
-        return user;
+        return { id: user.id, email: user.email, createdAt: user.createdAt };
       });
     } catch (error) {
       if (isUniqueViolation(error)) {

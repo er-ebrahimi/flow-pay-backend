@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Env (never bake secrets into the image)
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules
+npm-debug.log*
+
+# Build output (rebuilt inside the image)
+dist
+build
+*.tsbuildinfo
+
+# Tooling / editor
+.vscode
+.idea
+.DS_Store
+
+# Tests (not needed in the runtime image)
+test
+coverage
+
+# Docs
+*.md
+docs
