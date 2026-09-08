@@ -70,11 +70,23 @@ users) — not user-scoped, no PII. Rows are sorted by `code` ascending.
 
 ## Wallets
 
+All reads are scoped to the authenticated user — another user's wallets are never
+visible, and an unknown currency code produces the exact same 404 as a missing
+wallet (no existence leak).
+
 ### GET /wallets
 ```json
 // 200
-[ { "currencyCode": "USD", "balance": "10000.00", "transactionCount": 24 } ]
+[
+  { "currencyCode": "USD", "balance": "10000.00", "transactionCount": 24 }
+]
 ```
+- `balance` is display-ready: the DB numeric string rendered at the currency
+  `decimalPlaces` precision, rounded half-up on the magnitude (never truncating
+  tail digits — a balance must not silently lose money).
+- `transactionCount` counts transactions where the currency is the **source or
+  the destination** — the same cut `GET /transactions?currency=...` uses later.
+Rows are sorted by `currencyCode` ascending.
 
 ### GET /wallets/:currencyCode
 ```json
@@ -83,7 +95,9 @@ users) — not user-scoped, no PII. Rows are sorted by `code` ascending.
 ```
 | Case | Class | code | HTTP |
 |---|---|---|---|
-| No wallet for that currency, or currency doesn't exist | `NotFoundException` (`context: { currencyCode }`) | `NOT_FOUND` | 404 |
+| Route param not 3 uppercase letters | `ValidationPipeMapper` (auto) | `VALIDATION_FAILED` | 400 |
+| No wallet for that currency, or currency doesn't exist (identical body — don't leak existence) | `NotFoundException` (`context: { currencyCode }`, non-prod only) | `NOT_FOUND` | 404 |
+| Missing auth token | `JwtAuthGuard` (auto) | `UNAUTHORIZED` | 401 |
 
 ---
 

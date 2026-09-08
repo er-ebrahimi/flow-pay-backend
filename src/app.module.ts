@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
 import { ErrorHandlingModule } from './error-handling/error-handling.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CurrenciesModule } from './currencies/currencies.module.js';
+import { WalletsModule } from './wallets/wallets.module.js';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { CurrenciesModule } from './currencies/currencies.module.js';
     PrismaModule,
     AuthModule,
     CurrenciesModule,
+    WalletsModule,
     ErrorHandlingModule.forRoot(),
   ],
 })

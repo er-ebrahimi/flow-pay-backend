@@ -24,7 +24,7 @@ CI invariants: no `.skip()`, no `.only()`.
 
 ## 2. Current suite inventory
 
-### Unit — `npm test` (9 files, 47 tests)
+### Unit — `npm test` (11 files, 63 tests)
 
 | File | Covers | Notes |
 |---|---|---|
@@ -37,14 +37,17 @@ CI invariants: no `.skip()`, no `.only()`.
 | `src/error-handling/mappers/mappers.spec.ts` (10) | all 4 mappers | `supports`/`toResponse` incl. discriminative cases (BadRequest-without-array-payload skips `ValidationPipeMapper`) |
 | `src/error-handling/error-handling.module.spec.ts` (4) | `forRoot` options | mapper merge order, `APP_FILTER` registration, default logger, custom logger class swap, `IS_PRODUCTION` resolution |
 | `src/currencies/currencies.service.spec.ts` (4) | `CurrenciesService.findAll` | sorted output, `exclude` filter, unknown-code no-op filter, zero/positive `walletCount` aggregation via the fake DB |
+| `src/wallets/balance.mapper.spec.ts` (12) | `renderBalance` | per-currency precision rendering table incl. rounding (`0.999999→1.00`), carry-carrying (`999.999999→1000.000`), zero-scale, negative signs |
+| `src/wallets/wallets.service.spec.ts` (4) | `WalletsService` | sorted list + per-currency balance format, both-direction transaction counts, fresh-wallet zeros, `NOT_FOUND` with `context: { currencyCode }` via the fake PrismaDb |
 
-### E2E — `npm run test:e2e` (3 files, 13 tests, real HTTP via Supertest)
+### E2E — `npm run test:e2e` (4 files, 19 tests, real HTTP via Supertest)
 
 | File | Covers |
 |---|---|
 | `test/auth.e2e-spec.ts` (6) | register 201 shape, duplicate 409 `CONFLICT`, invalid credentials 401 `UNAUTHORIZED` (both branches byte-identical), unauthenticated 401 on `POST /auth/logout` (the protected guard probe until wallet/dashboard endpoints exist), malformed payload 400 `VALIDATION_FAILED`, full journey (register → login → authorized `POST /auth/logout` → USD wallet balance `100.000000` asserted in DB) |
 | `test/currencies.e2e-spec.ts` (5) | unauthenticated 401, seeded list sorted by code with camelCase rows, `?exclude=USD` filter, malformed `?exclude` → `VALIDATION_FAILED`, `walletCount` reflects the USD starter wallet created by registration |
-| `test/swagger.e2e-spec.ts` (2) | `/docs-json` serves bearer scheme + all documented paths + DTO constraints (`minLength/maxLength` on RegisterDto enforced by test); `/docs` serves the UI |
+| `test/wallets.e2e-spec.ts` (6) | unauthenticated 401, starter-wallet list with formatted balance, detail route with `createdAt`, identical 404 bodies for unknown vs unused currency, user-scoping of wallet reads, malformed route code → `VALIDATION_FAILED` |
+| `test/swagger.e2e-spec.ts` (2) | `/docs-json` serves bearer scheme + global security requirement + all documented paths + DTO constraints (`minLength/maxLength` on RegisterDto enforced by test); `/docs` serves the UI |
 
 ---
 
