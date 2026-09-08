@@ -1,0 +1,24 @@
+[
+  {
+    "id": "flowpay.guardrails",
+    "label": "Add FlowPay guardrail constraints and seed default currencies",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres:public.currency.trigger.flowpay-guardrail",
+      "details": {
+        "schema": "public",
+        "objectType": "trigger",
+        "name": "flowpay-guardrail",
+        "table": "currency"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Add FlowPay guardrail constraints and seed default currencies",
+        "sql": "\n          ALTER TABLE \"public\".\"exchangeQuote\"\n            ADD CONSTRAINT \"exchangeQuote_sameCurrency_check\"\n            CHECK (\"fromCurrency\" <> \"toCurrency\");\n\n          ALTER TABLE \"public\".\"exchangeRate\"\n            ADD CONSTRAINT \"exchangeRate_sameCurrency_check\"\n            CHECK (\"baseCurrency\" <> \"quoteCurrency\");\n\n          ALTER TABLE \"public\".\"transaction\"\n            ADD CONSTRAINT \"transaction_sameCurrency_check\"\n            CHECK (\"fromCurrency\" <> \"toCurrency\");\n\n          ALTER TABLE \"public\".\"wallet\"\n            ADD CONSTRAINT \"wallet_balanceNonNegative_check\"\n            CHECK (\"balance\" >= 0);\n\n          ALTER TABLE \"public\".\"transaction\"\n            ADD CONSTRAINT \"transaction_sourceAmountPositive_check\"\n            CHECK (\"sourceAmount\" > 0);\n\n          ALTER TABLE \"public\".\"exchangeQuote\"\n            ADD CONSTRAINT \"exchangeQuote_amountPositive_check\"\n            CHECK (\"amount\" > 0);\n\n          INSERT INTO \"public\".\"currency\" (\"code\", \"name\", \"decimalPlaces\") VALUES\n            ('USD', 'US Dollar',      2),\n            ('EUR', 'Euro',           2),\n            ('GBP', 'British Pound',  2),\n            ('AED', 'UAE Dirham',     2)\n          ON CONFLICT (\"code\") DO NOTHING;\n        "
+      }
+    ],
+    "postcheck": []
+  }
+]

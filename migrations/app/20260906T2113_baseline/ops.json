@@ -1,0 +1,1390 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.currency",
+    "label": "Create table \"currency\"",
+    "summary": "Creates table \"currency\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "currency"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"currency\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"currency\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"currency\"",
+        "sql": "CREATE TABLE \"public\".\"currency\" (\n  \"code\" text NOT NULL,\n  \"decimalPlaces\" int4 NOT NULL,\n  \"name\" text NOT NULL,\n  PRIMARY KEY (\"code\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"currency\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"currency\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.exchangeQuote",
+    "label": "Create table \"exchangeQuote\"",
+    "summary": "Creates table \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"exchangeQuote\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"exchangeQuote\"",
+        "sql": "CREATE TABLE \"public\".\"exchangeQuote\" (\n  \"amount\" numeric(18,6) NOT NULL,\n  \"consumedAt\" timestamptz,\n  \"expiresAt\" timestamptz NOT NULL,\n  \"fee\" numeric(18,6) NOT NULL,\n  \"fromCurrency\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"lockedRate\" numeric(18,10) NOT NULL,\n  \"toCurrency\" text NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"exchangeQuote\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.exchangeRate",
+    "label": "Create table \"exchangeRate\"",
+    "summary": "Creates table \"exchangeRate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "exchangeRate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"exchangeRate\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"exchangeRate\"",
+        "sql": "CREATE TABLE \"public\".\"exchangeRate\" (\n  \"baseCurrency\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"quoteCurrency\" text NOT NULL,\n  \"rate\" numeric(18,10) NOT NULL,\n  \"validFrom\" timestamptz NOT NULL,\n  \"validTo\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"exchangeRate\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.transaction",
+    "label": "Create table \"transaction\"",
+    "summary": "Creates table \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"transaction\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"transaction\"",
+        "sql": "CREATE TABLE \"public\".\"transaction\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"destinationAmount\" numeric(18,6) NOT NULL,\n  \"exchangeRate\" numeric(18,10) NOT NULL,\n  \"fee\" numeric(18,6) NOT NULL,\n  \"fromCurrency\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"idempotencyKey\" text NOT NULL,\n  \"quoteId\" uuid,\n  \"sourceAmount\" numeric(18,6) NOT NULL,\n  \"status\" text NOT NULL,\n  \"toCurrency\" text NOT NULL,\n  \"type\" text NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"transaction_status_check_04ef721f\" CHECK (\"status\" IN ('PENDING', 'COMPLETED', 'FAILED')),\n  CONSTRAINT \"transaction_type_check_71a5d00a\" CHECK (\"type\" IN ('EXCHANGE'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"transaction\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.user",
+    "label": "Create table \"user\"",
+    "summary": "Creates table \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"user\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"user\"",
+        "sql": "CREATE TABLE \"public\".\"user\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"email\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"passwordHash\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"user\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.wallet",
+    "label": "Create table \"wallet\"",
+    "summary": "Creates table \"wallet\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "wallet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"wallet\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wallet\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"wallet\"",
+        "sql": "CREATE TABLE \"public\".\"wallet\" (\n  \"balance\" numeric(18,6) NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"currencyCode\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"userId\" uuid NOT NULL,\n  \"version\" int4 DEFAULT 0 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"wallet\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wallet\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.transaction.transaction_quoteId_key",
+    "label": "Add unique constraint on \"transaction\" (quoteId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "transaction_quoteId_key",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"transaction_quoteId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_quoteId_key",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"transaction_quoteId_key\"",
+        "sql": "ALTER TABLE \"public\".\"transaction\" ADD CONSTRAINT \"transaction_quoteId_key\" UNIQUE (\"quoteId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"transaction_quoteId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_quoteId_key",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.transaction.transaction_idempotencyKey_key",
+    "label": "Add unique constraint on \"transaction\" (idempotencyKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "transaction_idempotencyKey_key",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"transaction_idempotencyKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_idempotencyKey_key",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"transaction_idempotencyKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"transaction\" ADD CONSTRAINT \"transaction_idempotencyKey_key\" UNIQUE (\"idempotencyKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"transaction_idempotencyKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_idempotencyKey_key",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.user.user_email_key",
+    "label": "Add unique constraint on \"user\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "user_email_key",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"user_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_email_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"user_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD CONSTRAINT \"user_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"user_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "user_email_key",
+          "public",
+          "\"public\".\"user\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.wallet.wallet_userId_currencyCode_key",
+    "label": "Add unique constraint on \"wallet\" (userId, currencyCode)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "wallet_userId_currencyCode_key",
+        "table": "wallet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"wallet_userId_currencyCode_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wallet_userId_currencyCode_key",
+          "public",
+          "\"public\".\"wallet\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"wallet_userId_currencyCode_key\"",
+        "sql": "ALTER TABLE \"public\".\"wallet\" ADD CONSTRAINT \"wallet_userId_currencyCode_key\" UNIQUE (\"userId\", \"currencyCode\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"wallet_userId_currencyCode_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wallet_userId_currencyCode_key",
+          "public",
+          "\"public\".\"wallet\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.exchangeQuote.exchangeQuote_fromCurrency_idx_1492403c",
+    "label": "Create index \"exchangeQuote_fromCurrency_idx_1492403c\" on \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "exchangeQuote_fromCurrency_idx_1492403c",
+        "table": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"exchangeQuote_fromCurrency_idx_1492403c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote_fromCurrency_idx_1492403c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"exchangeQuote_fromCurrency_idx_1492403c\"",
+        "sql": "CREATE INDEX \"exchangeQuote_fromCurrency_idx_1492403c\" ON \"public\".\"exchangeQuote\" (\"fromCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"exchangeQuote_fromCurrency_idx_1492403c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote_fromCurrency_idx_1492403c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.exchangeQuote.exchangeQuote_toCurrency_idx_c6b9c205",
+    "label": "Create index \"exchangeQuote_toCurrency_idx_c6b9c205\" on \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "exchangeQuote_toCurrency_idx_c6b9c205",
+        "table": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"exchangeQuote_toCurrency_idx_c6b9c205\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote_toCurrency_idx_c6b9c205\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"exchangeQuote_toCurrency_idx_c6b9c205\"",
+        "sql": "CREATE INDEX \"exchangeQuote_toCurrency_idx_c6b9c205\" ON \"public\".\"exchangeQuote\" (\"toCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"exchangeQuote_toCurrency_idx_c6b9c205\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote_toCurrency_idx_c6b9c205\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.exchangeQuote.exchangeQuote_userId_idx_a489d58a",
+    "label": "Create index \"exchangeQuote_userId_idx_a489d58a\" on \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "exchangeQuote_userId_idx_a489d58a",
+        "table": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"exchangeQuote_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"exchangeQuote_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"exchangeQuote_userId_idx_a489d58a\" ON \"public\".\"exchangeQuote\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"exchangeQuote_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeQuote_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.exchangeRate.exchangeRate_baseCurrency_idx_83e93f63",
+    "label": "Create index \"exchangeRate_baseCurrency_idx_83e93f63\" on \"exchangeRate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "exchangeRate_baseCurrency_idx_83e93f63",
+        "table": "exchangeRate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"exchangeRate_baseCurrency_idx_83e93f63\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate_baseCurrency_idx_83e93f63\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"exchangeRate_baseCurrency_idx_83e93f63\"",
+        "sql": "CREATE INDEX \"exchangeRate_baseCurrency_idx_83e93f63\" ON \"public\".\"exchangeRate\" (\"baseCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"exchangeRate_baseCurrency_idx_83e93f63\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate_baseCurrency_idx_83e93f63\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.exchangeRate.exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f",
+    "label": "Create index \"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\" on \"exchangeRate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f",
+        "table": "exchangeRate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\"",
+        "sql": "CREATE INDEX \"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\" ON \"public\".\"exchangeRate\" (\"baseCurrency\", \"quoteCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate_baseCurrency_quoteCurrency_idx_5f73ab3f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.exchangeRate.exchangeRate_quoteCurrency_idx_924ca661",
+    "label": "Create index \"exchangeRate_quoteCurrency_idx_924ca661\" on \"exchangeRate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "exchangeRate_quoteCurrency_idx_924ca661",
+        "table": "exchangeRate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"exchangeRate_quoteCurrency_idx_924ca661\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate_quoteCurrency_idx_924ca661\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"exchangeRate_quoteCurrency_idx_924ca661\"",
+        "sql": "CREATE INDEX \"exchangeRate_quoteCurrency_idx_924ca661\" ON \"public\".\"exchangeRate\" (\"quoteCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"exchangeRate_quoteCurrency_idx_924ca661\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"exchangeRate_quoteCurrency_idx_924ca661\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.transaction.transaction_fromCurrency_idx_1492403c",
+    "label": "Create index \"transaction_fromCurrency_idx_1492403c\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "transaction_fromCurrency_idx_1492403c",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"transaction_fromCurrency_idx_1492403c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_fromCurrency_idx_1492403c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"transaction_fromCurrency_idx_1492403c\"",
+        "sql": "CREATE INDEX \"transaction_fromCurrency_idx_1492403c\" ON \"public\".\"transaction\" (\"fromCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"transaction_fromCurrency_idx_1492403c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_fromCurrency_idx_1492403c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.transaction.transaction_quoteId_idx_a7628ce5",
+    "label": "Create index \"transaction_quoteId_idx_a7628ce5\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "transaction_quoteId_idx_a7628ce5",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"transaction_quoteId_idx_a7628ce5\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_quoteId_idx_a7628ce5\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"transaction_quoteId_idx_a7628ce5\"",
+        "sql": "CREATE INDEX \"transaction_quoteId_idx_a7628ce5\" ON \"public\".\"transaction\" (\"quoteId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"transaction_quoteId_idx_a7628ce5\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_quoteId_idx_a7628ce5\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.transaction.transaction_toCurrency_idx_c6b9c205",
+    "label": "Create index \"transaction_toCurrency_idx_c6b9c205\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "transaction_toCurrency_idx_c6b9c205",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"transaction_toCurrency_idx_c6b9c205\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_toCurrency_idx_c6b9c205\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"transaction_toCurrency_idx_c6b9c205\"",
+        "sql": "CREATE INDEX \"transaction_toCurrency_idx_c6b9c205\" ON \"public\".\"transaction\" (\"toCurrency\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"transaction_toCurrency_idx_c6b9c205\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_toCurrency_idx_c6b9c205\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.transaction.transaction_userId_idx_a489d58a",
+    "label": "Create index \"transaction_userId_idx_a489d58a\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "transaction_userId_idx_a489d58a",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"transaction_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"transaction_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"transaction_userId_idx_a489d58a\" ON \"public\".\"transaction\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"transaction_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.transaction.transaction_userId_type_idx_59b0b5ce",
+    "label": "Create index \"transaction_userId_type_idx_59b0b5ce\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "transaction_userId_type_idx_59b0b5ce",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"transaction_userId_type_idx_59b0b5ce\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_userId_type_idx_59b0b5ce\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"transaction_userId_type_idx_59b0b5ce\"",
+        "sql": "CREATE INDEX \"transaction_userId_type_idx_59b0b5ce\" ON \"public\".\"transaction\" (\"userId\", \"type\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"transaction_userId_type_idx_59b0b5ce\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transaction_userId_type_idx_59b0b5ce\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.wallet.wallet_currencyCode_idx_bb2a6aca",
+    "label": "Create index \"wallet_currencyCode_idx_bb2a6aca\" on \"wallet\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "wallet_currencyCode_idx_bb2a6aca",
+        "table": "wallet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"wallet_currencyCode_idx_bb2a6aca\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wallet_currencyCode_idx_bb2a6aca\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"wallet_currencyCode_idx_bb2a6aca\"",
+        "sql": "CREATE INDEX \"wallet_currencyCode_idx_bb2a6aca\" ON \"public\".\"wallet\" (\"currencyCode\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"wallet_currencyCode_idx_bb2a6aca\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wallet_currencyCode_idx_bb2a6aca\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.wallet.wallet_userId_idx_a489d58a",
+    "label": "Create index \"wallet_userId_idx_a489d58a\" on \"wallet\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "wallet_userId_idx_a489d58a",
+        "table": "wallet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"wallet_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wallet_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"wallet_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"wallet_userId_idx_a489d58a\" ON \"public\".\"wallet\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"wallet_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wallet_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.exchangeQuote.exchangeQuote_userId_fkey",
+    "label": "Add foreign key \"exchangeQuote_userId_fkey\" on \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "exchangeQuote_userId_fkey",
+        "table": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"exchangeQuote_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeQuote_userId_fkey",
+          "public",
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"exchangeQuote_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"exchangeQuote\"\nADD CONSTRAINT \"exchangeQuote_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"exchangeQuote_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeQuote_userId_fkey",
+          "public",
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.exchangeQuote.exchangeQuote_fromCurrency_fkey",
+    "label": "Add foreign key \"exchangeQuote_fromCurrency_fkey\" on \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "exchangeQuote_fromCurrency_fkey",
+        "table": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"exchangeQuote_fromCurrency_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeQuote_fromCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"exchangeQuote_fromCurrency_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"exchangeQuote\"\nADD CONSTRAINT \"exchangeQuote_fromCurrency_fkey\"\nFOREIGN KEY (\"fromCurrency\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"exchangeQuote_fromCurrency_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeQuote_fromCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.exchangeQuote.exchangeQuote_toCurrency_fkey",
+    "label": "Add foreign key \"exchangeQuote_toCurrency_fkey\" on \"exchangeQuote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "exchangeQuote_toCurrency_fkey",
+        "table": "exchangeQuote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"exchangeQuote_toCurrency_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeQuote_toCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"exchangeQuote_toCurrency_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"exchangeQuote\"\nADD CONSTRAINT \"exchangeQuote_toCurrency_fkey\"\nFOREIGN KEY (\"toCurrency\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"exchangeQuote_toCurrency_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeQuote_toCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeQuote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.exchangeRate.exchangeRate_baseCurrency_fkey",
+    "label": "Add foreign key \"exchangeRate_baseCurrency_fkey\" on \"exchangeRate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "exchangeRate_baseCurrency_fkey",
+        "table": "exchangeRate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"exchangeRate_baseCurrency_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeRate_baseCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeRate\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"exchangeRate_baseCurrency_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"exchangeRate\"\nADD CONSTRAINT \"exchangeRate_baseCurrency_fkey\"\nFOREIGN KEY (\"baseCurrency\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"exchangeRate_baseCurrency_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeRate_baseCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeRate\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.exchangeRate.exchangeRate_quoteCurrency_fkey",
+    "label": "Add foreign key \"exchangeRate_quoteCurrency_fkey\" on \"exchangeRate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "exchangeRate_quoteCurrency_fkey",
+        "table": "exchangeRate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"exchangeRate_quoteCurrency_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeRate_quoteCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeRate\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"exchangeRate_quoteCurrency_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"exchangeRate\"\nADD CONSTRAINT \"exchangeRate_quoteCurrency_fkey\"\nFOREIGN KEY (\"quoteCurrency\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"exchangeRate_quoteCurrency_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "exchangeRate_quoteCurrency_fkey",
+          "public",
+          "\"public\".\"exchangeRate\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.transaction.transaction_userId_fkey",
+    "label": "Add foreign key \"transaction_userId_fkey\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "transaction_userId_fkey",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"transaction_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_userId_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"transaction_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"transaction\"\nADD CONSTRAINT \"transaction_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"transaction_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_userId_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.transaction.transaction_quoteId_fkey",
+    "label": "Add foreign key \"transaction_quoteId_fkey\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "transaction_quoteId_fkey",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"transaction_quoteId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_quoteId_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"transaction_quoteId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"transaction\"\nADD CONSTRAINT \"transaction_quoteId_fkey\"\nFOREIGN KEY (\"quoteId\")\nREFERENCES \"public\".\"exchangeQuote\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"transaction_quoteId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_quoteId_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.transaction.transaction_fromCurrency_fkey",
+    "label": "Add foreign key \"transaction_fromCurrency_fkey\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "transaction_fromCurrency_fkey",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"transaction_fromCurrency_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_fromCurrency_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"transaction_fromCurrency_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"transaction\"\nADD CONSTRAINT \"transaction_fromCurrency_fkey\"\nFOREIGN KEY (\"fromCurrency\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"transaction_fromCurrency_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_fromCurrency_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.transaction.transaction_toCurrency_fkey",
+    "label": "Add foreign key \"transaction_toCurrency_fkey\" on \"transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "transaction_toCurrency_fkey",
+        "table": "transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"transaction_toCurrency_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_toCurrency_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"transaction_toCurrency_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"transaction\"\nADD CONSTRAINT \"transaction_toCurrency_fkey\"\nFOREIGN KEY (\"toCurrency\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"transaction_toCurrency_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transaction_toCurrency_fkey",
+          "public",
+          "\"public\".\"transaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.wallet.wallet_userId_fkey",
+    "label": "Add foreign key \"wallet_userId_fkey\" on \"wallet\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "wallet_userId_fkey",
+        "table": "wallet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"wallet_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wallet_userId_fkey",
+          "public",
+          "\"public\".\"wallet\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"wallet_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"wallet\"\nADD CONSTRAINT \"wallet_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"wallet_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wallet_userId_fkey",
+          "public",
+          "\"public\".\"wallet\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.wallet.wallet_currencyCode_fkey",
+    "label": "Add foreign key \"wallet_currencyCode_fkey\" on \"wallet\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "wallet_currencyCode_fkey",
+        "table": "wallet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"wallet_currencyCode_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wallet_currencyCode_fkey",
+          "public",
+          "\"public\".\"wallet\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"wallet_currencyCode_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"wallet\"\nADD CONSTRAINT \"wallet_currencyCode_fkey\"\nFOREIGN KEY (\"currencyCode\")\nREFERENCES \"public\".\"currency\" (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"wallet_currencyCode_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wallet_currencyCode_fkey",
+          "public",
+          "\"public\".\"wallet\""
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "flowpay.default-exchange-rates",
+    "label": "Seed default exchange rates for all seeded currency pairs",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres:public.exchangeRate.trigger.flowpay-default-rates",
+      "details": {
+        "schema": "public",
+        "objectType": "trigger",
+        "name": "flowpay-default-rates",
+        "table": "exchangeRate"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Insert active default rate 1 for every ordered pair of USD/EUR/GBP/AED",
+        "sql": "\n              INSERT INTO \"public\".\"exchangeRate\" (\"id\", \"baseCurrency\", \"quoteCurrency\", \"rate\", \"validFrom\", \"validTo\")\n              VALUES\n                (gen_random_uuid(), 'USD', 'EUR', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'USD', 'GBP', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'USD', 'AED', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'EUR', 'USD', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'EUR', 'GBP', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'EUR', 'AED', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'GBP', 'USD', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'GBP', 'EUR', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'GBP', 'AED', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'AED', 'USD', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'AED', 'EUR', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z'),\n                (gen_random_uuid(), 'AED', 'GBP', '1', '2000-01-01T00:00:00Z', '9999-12-31T23:59:59.999Z');\n            "
+      }
+    ],
+    "postcheck": []
+  }
+]

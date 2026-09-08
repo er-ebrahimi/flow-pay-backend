@@ -1,0 +1,59 @@
+classDiagram
+  class AuthController { <<Controller>> +register(dto) +login(dto) +logout() }
+  class AuthService { <<Service>> +validateUser() +issueToken() }
+  class JwtAuthGuard { <<Guard>> +canActivate() }
+
+  class WalletsController { <<Controller>> +getWallets() +getWallet(code) }
+  class WalletsService { <<Service>> +findAll(userId) +adjustBalance(id, delta) }
+  class Wallet { <<Entity>> balance: Decimal version: int }
+
+  class CurrenciesController { <<Controller>> +list() }
+  class CurrenciesService { <<Service>> +findAll() }
+  class Currency { <<Entity>> code: string decimalPlaces: int }
+
+  class RatesController { <<Controller>> +getRate(base, quote) }
+  class RatesService { <<Service>> +getCurrentRate(base, quote) }
+  class ExchangeRate { <<Entity>> rate: Decimal validFrom: Date }
+
+  class QuotesService { <<Service>> +createQuote(dto) +consumeQuote(id) }
+  class ExchangeQuote { <<Entity>> lockedRate: Decimal expiresAt: Date }
+
+  class ExchangeController { <<Controller>> +createQuote(dto) +confirm(dto) }
+  class ExchangeService { <<Orchestrator>> +execute(quoteId, userId) }
+
+  class TransactionsController { <<Controller>> +findAll(query) +findOne(id) }
+  class TransactionsService { <<Service>> +create(data) +findAll(userId) }
+  class Transaction { <<Entity>> status: string idempotencyKey: string }
+
+  class Money { <<ValueObject>> +add() +subtract() +multiply() }
+  class IdempotencyInterceptor { <<Interceptor>> +intercept() }
+
+  AuthController --> AuthService
+  AuthService ..> JwtAuthGuard : issues
+
+  WalletsController --> WalletsService
+  WalletsService --> Wallet
+  WalletsService --> Money
+
+  CurrenciesController --> CurrenciesService
+  CurrenciesService --> Currency
+  Wallet --> Currency
+  ExchangeRate --> Currency
+  ExchangeQuote --> Currency
+  Transaction --> Currency
+
+  RatesController --> RatesService
+  RatesService --> ExchangeRate
+
+  QuotesService --> ExchangeQuote
+  QuotesService --> RatesService
+
+  ExchangeController --> ExchangeService
+  ExchangeController ..> IdempotencyInterceptor : guarded by
+  ExchangeService --> WalletsService
+  ExchangeService --> QuotesService
+  ExchangeService --> TransactionsService
+  ExchangeService --> Money
+
+  TransactionsController --> TransactionsService
+  TransactionsService --> Transaction
