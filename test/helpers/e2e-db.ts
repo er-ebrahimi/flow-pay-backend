@@ -40,6 +40,17 @@ async function clientFor(): Promise<pg.Client> {
   return client;
 }
 
+/** Seeds an active USD→EUR / EUR→USD rate pair for the whole test window. */
+export async function seedExchangeRates(): Promise<void> {
+  const c = await clientFor();
+  await c.query(
+    `INSERT INTO "public"."exchangeRate" ("id","baseCurrency","quoteCurrency","rate","validFrom","validTo")
+     VALUES
+       (gen_random_uuid(), 'USD','EUR','0.8512', now() - interval '1 hour', now() + interval '1 hour'),
+       (gen_random_uuid(), 'EUR','USD','1.1700', now() - interval '2 hour', now() + interval '2 hour')`,
+  );
+}
+
 /**
  * Clears user-owned data between specs and restores the shared currency seed.
  * CASCADE handles the FK graph so truncation order never matters.

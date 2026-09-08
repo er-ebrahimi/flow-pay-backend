@@ -1,7 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Inject } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { AuthenticatedUser } from '../decorators/current-user.decorator.js';
 
 export const JWT_STRATEGY_NAME = 'jwt';
 
@@ -29,10 +31,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, JWT_STRATEGY_NAME) {
   }
 
   /**
-   * Passes the verified payload straight to the request context; there is no
-   * database lookup because the token is the sole source of truth.
+   * Normalizes the JWT claims into the AuthenticatedUser shape the app's
+   * controllers expect ({ id, email }) — `sub` is the raw claim name, not a
+   * domain name, and must not leak into transport code.
    */
-  override validate(payload: JwtPayload): JwtPayload {
-    return payload;
+  validate(payload: JwtPayload): AuthenticatedUser {
+    return { id: payload.sub, email: payload.email };
   }
 }

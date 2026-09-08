@@ -15,6 +15,29 @@ FlowPay is the backend service for a payments product. It exposes a JSON REST AP
 
 The full request/response contract is in [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md), and a live interactive spec is served by Swagger UI at `/docs`.
 
+## User stories
+
+| ID | As a | I want | So that |
+| --- | --- | --- | --- |
+| US-1 | new user | to register with an email and password | I get an account with a starter USD 100.00 wallet |
+| US-2 | returning user | to log in and receive a bearer JWT | only I can move my money |
+| US-3 | logged-in user | to log out | my client can discard the session token |
+| US-4 | user | to list supported currencies with wallet counts | I know which currencies I can hold |
+| US-5 | user | to see the currently active rate for a currency pair | I can time my exchange |
+| US-6 | user | to request an exchange quote with fee and locked rate | I know the exact outcome before committing |
+| US-7 | user | to confirm a quote using an `Idempotency-Key` header | a network retry never double-charges me |
+| US-8 | user | to view my wallets with balances and transaction counts | I can track my money at a glance |
+| US-9 | user | to see an aggregated dashboard of balances and activity | everything important is on one screen |
+
+Key acceptance rules:
+
+- Registration is atomic: user + starter wallet (`USD 100.00`) are created in a single transaction; a duplicate email returns `409 CONFLICT`.
+- Login never reveals whether an email is registered — unknown email and wrong password return the same `401`.
+- Quotes expire after 60 seconds; confirming an expired or already-consumed quote fails with a dedicated error code.
+- Confirm is idempotent: first execution answers `201`, a replayed key answers `200`, both with the identical body; a key belonging to another user answers `409`.
+- Wallet balances move under an optimistic `version` CAS with bounded retries, so concurrent confirms cannot double-spend.
+- An unknown currency and an owned-but-missing wallet both return the same uniform `404` — wallet existence is never leaked.
+
 ## Technologies
 
 | Layer | Choice |
@@ -53,6 +76,7 @@ The full request/response contract is in [`docs/API_CONTRACT.md`](docs/API_CONTR
    | `JWT_SECRET` | Yes | — | Secret used to sign JWTs; use a 64+ character random string |
    | `JWT_EXPIRES_IN` | No | `1d` | Access-token lifetime |
    | `PORT` | No | `3000` | HTTP port |
+   | `EXCHANGE_RATE_DEFAULT` | No | `1` | Default rate seeded for every currency pair by the default-rates migration; read once when that migration is attested, later edits do not reseed |
 
    `.env` is gitignored — never commit it.
 
@@ -93,6 +117,198 @@ src/
 test/                       E2E tests (*.e2e-spec.ts)
 docs/                       API contract, error handling, testing, review standards
 ```
+
+## Architecture
+
+Controllers stay thin and delegate to services; services own the business rules, talk to PostgreSQL through `PrismaService`, and raise domain exceptions that the global filter renders into the uniform error envelope. `Money` keeps decimal arithmetic exact, and password hashing hides behind the `PasswordHasher` port so the algorithm is swappable.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class AuthController {
+        +register(dto)
+        +login(dto)
+        +logout()
+    }
+    class AuthService {
+        +register(dto) AuthCommandResult
+        +login(dto) LoginResult
+        +logout()
+    }
+    class PasswordHasher {
+        <<interface>>
+        +hash(plain) Promise~string~
+        +verify(plain, hash) Promise~boolean~
+    }
+    class BcryptPasswordHasher {
+        +hash(plain) Promise~string~
+        +verify(plain, hash) Promise~boolean~
+    }
+    class Public {
+        <<annotation>>
+    }
+    class JwtAuthGuard {
+        +canActivate(context)
+    }
+
+    class WalletsController
+    class WalletsService {
+        +findAllForUser(userId) Promise~WalletDto[]~
+        +findByCode(userId, currencyCode) Promise~WalletDto~
+    }
+    class CurrenciesController
+    class CurrenciesService {
+        +findAll(query) Promise~CurrencyDto[]~
+    }
+    class RatesController
+    class RatesService {
+        +getActiveRate(base, quote) Promise~ActiveRate~
+    }
+    class QuotesController
+    class QuotesService {
+        +createQuote(userId, dto) Promise~ExchangeQuoteResponseDto~
+    }
+    class ExchangesController
+    class ExchangeService {
+        +confirm(userId, idempotencyKey, quoteId) Promise~TransactionResultDto~
+    }
+    class PrismaService {
+        +db PrismaDb
+    }
+    class Money {
+        +from(value, scale)$ Money
+        +add(other) Money
+        +subtract(other) Money
+        +multiply(factor) Money
+        +roundTo(scale) Money
+        +isLessThan(other) boolean
+        +toDecimalString() string
+    }
+
+    class AppException {
+        <<abstract>>
+        +code string
+        +httpStatus number
+        +context Record~string,unknown~
+    }
+    class NotFoundException
+    class ValidationException
+    class ConflictException
+    class InsufficientFundsException
+    class QuoteExpiredException
+    class QuoteAlreadyConsumedException
+
+    AuthController --> AuthService
+    AuthService --> PasswordHasher : hasher port
+    BcryptPasswordHasher ..|> PasswordHasher
+    AuthService --> PrismaService
+    WalletsController --> WalletsService
+    CurrenciesController --> CurrenciesService
+    RatesController --> RatesService
+    QuotesController --> QuotesService
+    ExchangesController --> ExchangeService
+    WalletsService --> PrismaService
+    CurrenciesService --> PrismaService
+    RatesService --> PrismaService
+    QuotesService --> PrismaService
+    QuotesService --> RatesService : active rate
+    QuotesService --> Money
+    ExchangeService --> PrismaService
+    ExchangeService --> Money
+    JwtAuthGuard ..> Public : opt-out
+    AppException <|-- NotFoundException
+    AppException <|-- ValidationException
+    AppException <|-- ConflictException
+    AppException <|-- InsufficientFundsException
+    AppException <|-- QuoteExpiredException
+    AppException <|-- QuoteAlreadyConsumedException
+```
+
+## Data model
+
+```mermaid
+erDiagram
+    USER ||--o{ WALLET : owns
+    USER ||--o{ EXCHANGE_QUOTE : requests
+    USER ||--o{ TRANSACTION : performs
+    CURRENCY ||--o{ WALLET : denominates
+    CURRENCY ||--o{ EXCHANGE_RATE : "quoted via"
+    CURRENCY ||--o{ EXCHANGE_QUOTE : converts
+    CURRENCY ||--o{ TRANSACTION : converts
+    EXCHANGE_QUOTE |o--o| TRANSACTION : "consumed by"
+
+    USER {
+        uuid id PK
+        string email UK
+        string passwordHash
+        timestamptz createdAt
+    }
+    CURRENCY {
+        string code PK
+        string name
+        int decimalPlaces
+    }
+    WALLET {
+        uuid id PK
+        uuid userId FK
+        string currencyCode FK
+        numeric balance "Numeric(18,6)"
+        int version "optimistic-lock CAS"
+    }
+    EXCHANGE_RATE {
+        uuid id PK
+        string baseCurrency FK
+        string quoteCurrency FK
+        numeric rate "Numeric(18,10)"
+        timestamptz validFrom
+        timestamptz validTo
+    }
+    EXCHANGE_QUOTE {
+        uuid id PK
+        uuid userId FK
+        string fromCurrency FK
+        string toCurrency FK
+        numeric amount
+        numeric fee
+        numeric lockedRate
+        timestamptz expiresAt
+        timestamptz consumedAt
+    }
+    TRANSACTION {
+        uuid id PK
+        uuid userId FK
+        uuid quoteId FK "nullable, unique"
+        enum type "EXCHANGE"
+        string fromCurrency FK
+        string toCurrency FK
+        numeric sourceAmount
+        numeric fee
+        numeric exchangeRate
+        numeric destinationAmount
+        enum status "PENDING | COMPLETED | FAILED"
+        string idempotencyKey UK
+        timestamptz createdAt
+    }
+```
+
+The source of truth is [`prisma/schema.prisma`](prisma/schema.prisma) — regenerate the contract with `npm run contract:emit` after any change there.
+
+## Default exchange rates
+
+Every ordered pair of the supported currencies (USD, EUR, GBP, AED) has a seeded default rate, so `GET /exchange-rates`, exchange quotes, and dashboard totals work on a fresh database:
+
+- Defaults are **1:1 parity** (`1.0000000000`), inserted by the `flowpay_default_exchange_rates` data migration. The value comes from `EXCHANGE_RATE_DEFAULT` (fallback `1`) and is read once when the migration is attested — editing `.env` afterwards does not change already-seeded rows.
+- Defaults are valid 2000→9999 (always active) but carry the oldest `validFrom`, so any real rate inserted later **automatically supersedes** them: `RatesService.getActiveRate` picks the newest `validFrom` among active rows.
+- Pairs of currencies with no rate row at all still return `404 NOT_FOUND` (see [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md)).
+
+## Database setup & seeding
+
+```bash
+npx prisma db update   # plans + applies contract operations (tables, indexes, FKs)
+```
+
+`prisma db update` plans **contract operations only** — it does not replay the raw-SQL data migrations under `migrations/app/`. For a fresh database, also execute the SQL in each data migration's `execute` block (currency seed + guardrail check constraints in `20260906T2115_flowpay_guardrails_seed`, default exchange rates in `20260908T1446_flowpay_default_exchange_rates`) via `psql` or a small `pg` script. Beware: because the guardrail check constraints are not part of the contract, a later `db update` may propose dropping them as "destructive operations" — never consent blindly.
 
 ## API overview
 

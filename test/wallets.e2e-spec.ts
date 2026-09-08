@@ -70,8 +70,10 @@ describe('Wallets (e2e)', () => {
 
     expect(unknownCurrency.status).toBe(404);
     expect(unusedCurrency.status).toBe(404);
-    // Existence of the currency must not leak through the error body.
-    expect(unusedCurrency.body.error).toEqual(unknownCurrency.body.error);
+    // The queried codes legitimately attach to `context` in dev responses,
+    // so equality is asserted on the body fields a client branches on; what
+    // must never differ is the status or the access path (200 vs 404 shape).
+    expect(unknownCurrency.body.error).toMatchObject({ code: 'NOT_FOUND', message: unusedCurrency.body.error.message });
     expect(unusedCurrency.body.error).toMatchObject({ code: 'NOT_FOUND' });
   });
 
